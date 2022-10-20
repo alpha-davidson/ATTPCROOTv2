@@ -1,7 +1,7 @@
 #!/bin/bash
 export SIMPATH=~/ALPhA/install/FairSoft
 export FAIRROOTPATH=~/ALPhA/install/FairRoot
-#export GENFIT=/mnt/simulations/attpcroot/fair_install_18.6/GenFit
+export GENFIT=~/ALPhA/install/genfit
 
 # Add cmake bin to the front of path
 if [[ $PATH != *"cmake/bin"* ]]; then
