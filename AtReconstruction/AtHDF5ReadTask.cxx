@@ -29,7 +29,7 @@ InitStatus AtHDF5ReadTask::Init()
    ioMan->Register(fOutputBranchName, "AtTPC", &fEventArray, fIsPersistence);
 
    // TODO: Here is where we will need to open the HDF5 file
-
+   fFile = std::make_unique<H5::H5File>(fInputFileName, H5F_ACC_RDONLY);
    return kSUCCESS;
 }
 
@@ -40,17 +40,25 @@ void AtHDF5ReadTask::Exec(Option_t *opt)
    // the group in the file"
 
    // Because events are indexted by their event number the opening line will be something like
-   auto eventGroup = std::make_unique<H5::Group>(fFile->openGroup(TString::Format("Event_[%d]", fEventNum++)));
+   
+   auto hitArray = fFile->openDataset(TString::Format("Event_[%d]/HitArray", fEventNum));
+   auto trace = fFile->openDataset(TString::Format("Event_[%d]/Trace", fEventNum));
+   hid_t dspace = H5Dget_space(hitArray);
+   const int ndims = H5Sget_simple_extent_ndims(dspace);
+   hsize_t dims[ndims];
+   H5Sget_simple_extent_dims(dspace, dims, NULL);
+   fEventNum++;
 
    // Then we create the event to fill
+
    auto *event = dynamic_cast<AtEvent *>(fEventArray.ConstructedAt(0, "C")); // Get and clear old event
+   std::array<AtHit_t, dims[0]> eventArray;
+   auto hdf5Type = AtHit().GetHDF5Type();
+   auto status = H5Dread(hitArray, hdf5Type, H5S_ALL, H5S_ALL, H5P_DEFAULT, eventArray.data())
 
-   // Then we will look for the hits in the event group and add them to the event. This will involve
-   // iterating through the dataset. The code in the loop will look something like.
-   AtHit_t hitFromFile{};
-   event->AddHit(-1, AtHit::XYZPoint(hitFromFile.x, hitFromFile.y, hitFromFile.z), hitFromFile.A);
-
-   // After this loop filling the event, I don't think there is anything else to do
+   for(auto & hit : eventArray){
+      event->AddHit(-1, AtHit::XYZPoint(hit.x, hit.y, hit.z), hit.A);
+   }
 }
 
 ClassImp(AtHDF5ReadTask);
